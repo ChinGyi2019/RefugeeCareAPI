@@ -1,0 +1,149 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String      @id @default(auto()) @map("_id") @db.ObjectId
+  phoneNumber String      @unique
+  email       String   
+  password    String
+  name        String
+  gender      String?
+  active      Boolean     @default(true)
+  profile     Profile?
+  role        Role?       
+  communities CommunityUser[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Role {
+  id        String       @id @default(auto()) @map("_id") @db.ObjectId
+  type      String
+  userId    String       @unique  
+  user      User         @relation(fields: [userId], references: [id])
+}
+
+model Profile {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  bio           String
+  case          String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id])
+  userId        String   @unique  
+}
+
+model Card {
+  id              String  @id @default(auto()) @map("_id") @db.ObjectId
+  cardNumber      String  @unique
+  fullName        String
+  dateOfBirth     String?
+  nationality     String?
+  dateOfIssue     DateTime @default(now())
+  dateOfexpiry    DateTime?
+  gender          String?
+  uNCardNumber    String?
+  studentNumber   String?
+  passportPhoto   String?
+  forntPhoto      String?
+  backPhoto       String?
+  status          String?
+  active          Boolean   @default(true)
+  communityId     String    @db.ObjectId
+  community       Community @relation(fields: [communityId], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Community {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  name          String   @unique
+  email         String[]   
+  shortName     String?
+  logoImage     String?
+  phoneNumber   String[]
+  description   String
+  description2  String?
+  description3  String?
+  cards         Card[]
+  notifications Notification[]
+  advertisements Advertisement[]
+  directory     Directory[]
+  users         CommunityUser[] // Relationship to CommunityUser
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model CommunityUser {
+  id            String     @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String     @db.ObjectId
+  user          User       @relation(fields: [userId], references: [id])
+  communityId   String     @db.ObjectId
+  community     Community  @relation(fields: [communityId], references: [id])
+  @@unique([userId, communityId]) // Ensures uniqueness of the pair
+}
+
+model Notification{
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  title         String
+  description   String
+  type          String?
+  backDropImage String?
+  description2  String?
+  description3  String?
+  expriedDate   DateTime?
+  isPublic      Boolean   @default(false)
+  communityId   String    @db.ObjectId
+  community     Community @relation(fields: [communityId], references: [id])
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Advertisement {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  title         String
+  description   String
+  type          String?
+  backDropImage String?
+  description2  String?
+  description3  String?
+  expriedDate   DateTime?
+  isPublic      Boolean   @default(false)
+  communityId   String?    @db.ObjectId
+  community     Community? @relation(fields: [communityId], references: [id])
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Directory {
+  id            String     @id @default(auto()) @map("_id") @db.ObjectId
+  title         String
+  description   String
+  type          String?
+  phoneNumber   String[]
+  email         String[]
+  profileImage  String?
+  description2  String?
+  description3  String?
+  isPublic      Boolean    @default(false)
+  communityId   String?    @db.ObjectId
+  community     Community? @relation(fields: [communityId], references: [id])
+  active        Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
