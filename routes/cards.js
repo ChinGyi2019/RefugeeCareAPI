@@ -106,7 +106,7 @@ router.post(
         ? path.join(uploadDirectory, `${fileNamePrefix}-backPhoto.jpg`)
         : null;
 
-      // Create the card entry with the file paths included
+      //  Create the card entry with the file paths included
       const card = await prisma.card.create({
         data: {
           ...req.body,
