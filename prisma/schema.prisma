@@ -57,7 +57,7 @@ model Card {
   uNCardNumber    String?
   studentNumber   String?
   passportPhoto   String?
-  forntPhoto      String?
+  frontPhoto      String?
   backPhoto       String?
   status          String?
   active          Boolean   @default(true)

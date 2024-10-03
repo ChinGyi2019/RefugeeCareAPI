@@ -8,6 +8,7 @@ const prisma = new PrismaClient();
 const path = require("path");
 const process = require("process");
 const fs = require("fs");
+const { sendResponse } = require("../utils/sendResponse");
 require("dotenv").config();
 
 // Set up multer for file uploads
@@ -35,16 +36,11 @@ router.post(
   auth,
   upload.fields([
     { name: "passportPhoto", maxCount: 1 },
-    { name: "forntPhoto", maxCount: 1 },
+    { name: "frontPhoto", maxCount: 1 },
     { name: "backPhoto", maxCount: 1 },
   ]),
   [
     body("cardNumber").notEmpty().withMessage("Card number is required"),
-    // body("email")
-    //   .notEmpty()
-    //   .withMessage("Email is required")
-    //   .isEmail()
-    //   .withMessage("Invalid email format"),
     body("fullName").notEmpty().withMessage("Full name is required"),
     body("communityId")
       .notEmpty()
@@ -54,84 +50,226 @@ router.post(
     body("dateOfBirth").notEmpty().withMessage("Date of birth is required"),
     body("nationality").notEmpty().withMessage("Nationality is required"),
     body("gender").notEmpty().withMessage("Gender is required"),
-    // body("status").notEmpty().withMessage("Status is required"),
     (req, res, next) => {
-      // Validate that at least one photo is uploaded
       if (!req.files.passportPhoto) {
-        return res.status(400).json({
-          error: "(passportPhoto) is required",
-        });
+        return sendResponse(
+          res,
+          null,
+          400,
+          "Error",
+          "Please upload the required file(s)",
+          "passportPhoto is required"
+        );
       }
-      if (!req.files.forntPhoto) {
-        return res.status(400).json({
-          error: "(forntPhoto) is required",
-        });
+      if (!req.files.frontPhoto) {
+        return sendResponse(
+          res,
+          null,
+          400,
+          "Error",
+          "Please upload the required file(s)",
+          "frontPhoto is required"
+        );
       }
       if (!req.files.backPhoto) {
-        return res.status(400).json({
-          error: "(backPhoto) is required",
-        });
+        return sendResponse(
+          res,
+          null,
+          400,
+          "Error",
+          "Please upload the required file(s)",
+          "backPhoto is required"
+        );
       }
       next();
     },
   ],
   async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
     try {
-      // Extract file buffers from the uploaded files
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        const errorMessage = errors
+          .array()
+          .map((error) => error.msg + " " + error.param)
+          .join(", ");
+        return sendResponse(
+          res,
+          null,
+          400,
+          "Error",
+          "Validation failed",
+          errorMessage
+        );
+      }
+
+      // Extract file buffers
       const passportPhotoBuffer = req.files.passportPhoto
         ? req.files.passportPhoto[0].buffer
         : null;
-      const forntPhotoBuffer = req.files.forntPhoto
+      const frontPhotoBuffer = req.files.forntPhoto
         ? req.files.forntPhoto[0].buffer
         : null;
       const backPhotoBuffer = req.files.backPhoto
         ? req.files.backPhoto[0].buffer
         : null;
 
-      // Generate file paths for permanent storage
+      // Generate file paths
       const fileNamePrefix = Date.now();
-      const uploadDirectory = process.env.STOARAGE_URL;
+      const uploadDirectory = process.env.STORAGE_URL;
       const passportPhotoPath = passportPhotoBuffer
         ? path.join(uploadDirectory, `${fileNamePrefix}-passportPhoto.jpg`)
         : null;
-      const forntPhotoPath = forntPhotoBuffer
+      const frontPhotoPath = frontPhotoBuffer
         ? path.join(uploadDirectory, `${fileNamePrefix}-forntPhoto.jpg`)
         : null;
       const backPhotoPath = backPhotoBuffer
         ? path.join(uploadDirectory, `${fileNamePrefix}-backPhoto.jpg`)
         : null;
 
-      //  Create the card entry with the file paths included
+      // Save files to disk after card creation
+
       const card = await prisma.card.create({
         data: {
           ...req.body,
           passportPhoto: passportPhotoPath,
-          forntPhoto: forntPhotoPath,
+          frontPhoto: frontPhotoPath,
           backPhoto: backPhotoPath,
         },
       });
-      // Save the files to disk only if the card creation is successful
+
       if (passportPhotoBuffer) {
         fs.writeFileSync(passportPhotoPath, passportPhotoBuffer);
       }
-      if (forntPhotoBuffer) {
-        fs.writeFileSync(forntPhotoPath, forntPhotoBuffer);
+      if (frontPhotoBuffer) {
+        fs.writeFileSync(frontPhotoPath, frontPhotoBuffer);
       }
       if (backPhotoBuffer) {
         fs.writeFileSync(backPhotoPath, backPhotoBuffer);
       }
-      res.json(card);
+
+      return sendResponse(
+        res,
+        card,
+        0,
+        "Success",
+        "Card created successfully",
+        "CARD_CREATED"
+      );
     } catch (error) {
       console.error(error);
-      res.status(400).json({ error: error.message });
+      return sendResponse(
+        res,
+        null,
+        500,
+        "Error",
+        "Something went wrong",
+        error.message
+      );
     }
   }
 );
+// router.post(
+//   "/cards",
+//   auth,
+//   upload.fields([
+//     { name: "passportPhoto", maxCount: 1 },
+//     { name: "forntPhoto", maxCount: 1 },
+//     { name: "backPhoto", maxCount: 1 },
+//   ]),
+//   [
+//     body("cardNumber").notEmpty().withMessage("Card number is required"),
+//     // body("email")
+//     //   .notEmpty()
+//     //   .withMessage("Email is required")
+//     //   .isEmail()
+//     //   .withMessage("Invalid email format"),
+//     body("fullName").notEmpty().withMessage("Full name is required"),
+//     body("communityId")
+//       .notEmpty()
+//       .withMessage("Community ID is required")
+//       .isMongoId()
+//       .withMessage("Invalid Community ID format"),
+//     body("dateOfBirth").notEmpty().withMessage("Date of birth is required"),
+//     body("nationality").notEmpty().withMessage("Nationality is required"),
+//     body("gender").notEmpty().withMessage("Gender is required"),
+//     // body("status").notEmpty().withMessage("Status is required"),
+//     (req, res, next) => {
+//       // Validate that at least one photo is uploaded
+//       if (!req.files.passportPhoto) {
+//         return res.status(400).json({
+//           error: "(passportPhoto) is required",
+//         });
+//       }
+//       if (!req.files.forntPhoto) {
+//         return res.status(400).json({
+//           error: "(forntPhoto) is required",
+//         });
+//       }
+//       if (!req.files.backPhoto) {
+//         return res.status(400).json({
+//           error: "(backPhoto) is required",
+//         });
+//       }
+//       next();
+//     },
+//   ],
+//   async (req, res) => {
+//     const errors = validationResult(req);
+//     if (!errors.isEmpty()) {
+//       return res.status(400).json({ errors: errors.array() });
+//     }
+
+//     try {
+//       // Extract file buffers from the uploaded files
+//       const passportPhotoBuffer = req.files.passportPhoto
+//         ? req.files.passportPhoto[0].buffer
+//         : null;
+//       const forntPhotoBuffer = req.files.forntPhoto
+//         ? req.files.forntPhoto[0].buffer
+//         : null;
+//       const backPhotoBuffer = req.files.backPhoto
+//         ? req.files.backPhoto[0].buffer
+//         : null;
+
+//       // Generate file paths for permanent storage
+//       const fileNamePrefix = Date.now();
+//       const uploadDirectory = process.env.STOARAGE_URL;
+//       const passportPhotoPath = passportPhotoBuffer
+//         ? path.join(uploadDirectory, `${fileNamePrefix}-passportPhoto.jpg`)
+//         : null;
+//       const forntPhotoPath = forntPhotoBuffer
+//         ? path.join(uploadDirectory, `${fileNamePrefix}-forntPhoto.jpg`)
+//         : null;
+//       const backPhotoPath = backPhotoBuffer
+//         ? path.join(uploadDirectory, `${fileNamePrefix}-backPhoto.jpg`)
+//         : null;
+
+//       //  Create the card entry with the file paths included
+//       const card = await prisma.card.create({
+//         data: {
+//           ...req.body,
+//           passportPhoto: passportPhotoPath,
+//           forntPhoto: forntPhotoPath,
+//           backPhoto: backPhotoPath,
+//         },
+//       });
+//       // Save the files to disk only if the card creation is successful
+//       if (passportPhotoBuffer) {
+//         fs.writeFileSync(passportPhotoPath, passportPhotoBuffer);
+//       }
+//       if (forntPhotoBuffer) {
+//         fs.writeFileSync(forntPhotoPath, forntPhotoBuffer);
+//       }
+//       if (backPhotoBuffer) {
+//         fs.writeFileSync(backPhotoPath, backPhotoBuffer);
+//       }
+//       res.json(card);
+//     } catch (error) {
+//       console.error(error);
+//       res.status(400).json({ error: error.message });
+//     }
+//   }
+// );
 // update card
 router.put(
   "/cards/:id",
