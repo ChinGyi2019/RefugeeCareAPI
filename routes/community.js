@@ -4,6 +4,7 @@ const auth = require("../middleware/auth");
 const { route } = require("./auth");
 const router = express.Router();
 const { PrismaClient } = require("@prisma/client");
+const { sendResponse } = require("../utils/sendResponse");
 const prisma = new PrismaClient();
 
 // Create a new community with validation
@@ -109,8 +110,21 @@ router.get("/communities/:id", auth, async (req, res) => {
 });
 // get all community
 router.get("/communities", async (req, res) => {
-  const communities = await prisma.community.findMany();
-  res.json(communities);
+  try {
+    const communities = await prisma.community.findMany();
+    // res.json(communities);
+    return sendResponse(res, communities, 0, "Success", "success", "");
+  } catch (excetpion) {
+    console.error(excetpion);
+    return sendResponse(
+      res,
+      null,
+      500,
+      "Error",
+      "Something went wrong",
+      excetpion.message
+    );
+  }
 });
 // delete community
 router.delete("/communities/:id", auth, async (req, res) => {

@@ -42,11 +42,7 @@ router.post(
   [
     body("cardNumber").notEmpty().withMessage("Card number is required"),
     body("fullName").notEmpty().withMessage("Full name is required"),
-    body("communityId")
-      .notEmpty()
-      .withMessage("Community ID is required")
-      .isMongoId()
-      .withMessage("Invalid Community ID format"),
+    body("communityId").notEmpty().withMessage("Community ID is required"),
     body("dateOfBirth").notEmpty().withMessage("Date of birth is required"),
     body("nationality").notEmpty().withMessage("Nationality is required"),
     body("gender").notEmpty().withMessage("Gender is required"),
@@ -106,8 +102,8 @@ router.post(
       const passportPhotoBuffer = req.files.passportPhoto
         ? req.files.passportPhoto[0].buffer
         : null;
-      const frontPhotoBuffer = req.files.forntPhoto
-        ? req.files.forntPhoto[0].buffer
+      const frontPhotoBuffer = req.files.frontPhoto
+        ? req.files.frontPhoto[0].buffer
         : null;
       const backPhotoBuffer = req.files.backPhoto
         ? req.files.backPhoto[0].buffer
@@ -126,15 +122,43 @@ router.post(
         ? path.join(uploadDirectory, `${fileNamePrefix}-backPhoto.jpg`)
         : null;
 
+      const userId = req.user.userId;
+      const parseDate = (dateString) => {
+        // Try to parse the date string
+        const date = new Date(dateString);
+        // Check if the date is valid
+        if (isNaN(date.getTime())) {
+          // If the date is invalid, return null or a default date
+          return null; // or return new Date(); for current date
+        }
+        return date;
+      };
       // Save files to disk after card creation
-
       const card = await prisma.card.create({
         data: {
-          ...req.body,
+          cardNumber: req.body.cardNumber,
+          fullName: req.body.fullName,
+          dateOfBirth: req.body.dateOfBirth,
+          nationality: req.body.nationality,
+          dateOfIssue: parseDate(req.body.dateOfIssue) || new Date(),
+          dateOfexpiry: parseDate(req.body.dateOfexpiry),
+          gender: req.body.gender,
+          uNCardNumber: req.body.uNCardNumber,
+          studentNumber: req.body.studentNumber,
           passportPhoto: passportPhotoPath,
           frontPhoto: frontPhotoPath,
           backPhoto: backPhotoPath,
+          status: req.body.status,
+          active: req.body.active ?? true,
+          communityId: req.body.communityId,
+          userId: userId,
         },
+        // data: {
+        //   ...req.body,
+        //   passportPhoto: passportPhotoPath,
+        //   frontPhoto: frontPhotoPath,
+        //   backPhoto: backPhotoPath,
+        // },
       });
 
       if (passportPhotoBuffer) {
@@ -147,9 +171,15 @@ router.post(
         fs.writeFileSync(backPhotoPath, backPhotoBuffer);
       }
 
+      const allCards = await prisma.card.findMany({
+        where: {
+          userId: userId,
+        },
+      });
+
       return sendResponse(
         res,
-        card,
+        allCards,
         0,
         "Success",
         "Card created successfully",

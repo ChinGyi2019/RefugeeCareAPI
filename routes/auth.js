@@ -71,7 +71,7 @@ router.post(
         },
       });
       const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
-        expiresIn: "1h",
+        expiresIn: "3y",
       });
       return sendResponse(
         (res = res),
@@ -131,7 +131,7 @@ router.post("/login", async (req, res) => {
 
     // Generate JWT
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
-      expiresIn: "1h",
+      expiresIn: "3y",
     });
 
     res.json({ token: token, user: userWithoutPassword });
