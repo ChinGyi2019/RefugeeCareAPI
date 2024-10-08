@@ -15,10 +15,31 @@ require("dotenv").config();
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-// get all cards
+// get user by id
 router.get("/cards", auth, async (req, res) => {
-  const cards = await prisma.card.findMany();
-  res.json(cards);
+  const userId = req.user.userId;
+
+  try {
+    const cards = await prisma.card.findMany({
+      where: {
+        userId: userId, // filter cards by the user's ID
+      },
+      include: {
+        community: true, // Include the related Community object
+      },
+    });
+    return sendResponse(res, cards, 0, "Success", "success", "");
+  } catch (error) {
+    console.error(error);
+    return sendResponse(
+      res,
+      null,
+      500,
+      "Error",
+      "Something went wrong",
+      excetpion.message
+    );
+  }
 });
 
 // get card by ID
