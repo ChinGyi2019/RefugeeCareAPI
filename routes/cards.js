@@ -24,6 +24,9 @@ router.get("/cards", auth, async (req, res) => {
       where: {
         userId: userId, // filter cards by the user's ID
       },
+      orderBy: {
+        createdAt: "desc", // Sort in ascending order (oldest first), use 'desc' for descending (newest first)
+      },
       include: {
         community: true, // Include the related Community object
       },
@@ -195,6 +198,12 @@ router.post(
       const allCards = await prisma.card.findMany({
         where: {
           userId: userId,
+        },
+        include: {
+          community: true, // Include the related Community object
+        },
+        orderBy: {
+          createdAt: "desc", // Sort in ascending order (oldest first), use 'desc' for descending (newest first)
         },
       });
 
