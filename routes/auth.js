@@ -106,40 +106,124 @@ router.post(
     }
   }
 );
+router.post(
+  "/login",
+  [
+    check("password").isLength({ min: 6 }).withMessage("Password is too short"),
+    check("phoneNumber").notEmpty().withMessage("Phone number is required"),
+  ],
+  async (req, res) => {
+    try {
+      // Validate request body
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        const errorMessage = errors
+          .array()
+          .map((error) => error.msg + " " + error.path)
+          .join(", ");
+        return sendResponse(
+          res,
+          null,
+          401,
+          "Error",
+          "Please fill the required fields",
+          errorMessage
+        );
+      }
 
-// User Login Route
-router.post("/login", async (req, res) => {
-  const { email, password, phoneNumber } = req.body;
-  try {
-    // Find user by phone number
-    const user = await prisma.user.findUnique({
-      where: { phoneNumber },
-    });
-    // Exclude the password from the response
-    const { password: _, ...userWithoutPassword } = user;
+      const { password, phoneNumber } = req.body;
 
-    if (!user) {
-      return res.status(401).json({ error: "Invalid credentials" });
+      // Find user by phone number
+      const user = await prisma.user.findUnique({
+        where: { phoneNumber },
+      });
+
+      if (!user) {
+        return sendResponse(
+          res,
+          null,
+          401,
+          "Error",
+          "Invalid credentials",
+          "USER_NOT_FOUND"
+        );
+      }
+
+      // Check password
+      const isValidPassword = await bcrypt.compare(password, user.password);
+      if (!isValidPassword) {
+        return sendResponse(
+          res,
+          null,
+          401,
+          "Error",
+          "Invalid credentials",
+          "INVALID_PASSWORD"
+        );
+      }
+
+      // Generate JWT
+      const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
+        expiresIn: "3y",
+      });
+
+      // Exclude password from user object
+      const { password: _, ...userWithoutPassword } = user;
+
+      // Return success response with user data and token
+      return sendResponse(
+        res,
+        { ...userWithoutPassword, token: token },
+        0,
+        "Login successful",
+        "USER_LOGGED_IN"
+      );
+    } catch (error) {
+      console.error(error);
+      return sendResponse(
+        res,
+        null,
+        500,
+        "Error",
+        "Something went wrong",
+        error.toString()
+      );
     }
-
-    // Check password
-    const isValidPassword = await bcrypt.compare(password, user.password);
-
-    if (!isValidPassword) {
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
-
-    // Generate JWT
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
-      expiresIn: "3y",
-    });
-
-    res.json({ token: token, user: userWithoutPassword });
-  } catch (error) {
-    console.log(error);
-    res.status(500).send(error);
   }
-});
+);
+// User Login Route
+// router.post("/login", async (req, res) => {
+//   const { email, password, phoneNumber } = req.body;
+//   try {
+//     // Find user by phone number
+//     const user = await prisma.user.findUnique({
+//       where: { phoneNumber },
+//     });
+//     // Exclude the password from the response
+//     const { password: _, ...userWithoutPassword } = user;
+
+//     if (!user) {
+//       return res.status(401).json({ error: "Invalid credentials" });
+//     }
+
+//     // Check password
+//     const isValidPassword = await bcrypt.compare(password, user.password);
+
+//     if (!isValidPassword) {
+//       return res.status(401).json({ error: "Invalid credentials" });
+//     }
+
+//     // Generate JWT
+//     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
+//       expiresIn: "3y",
+//     });
+
+//     res.json({ token: token, user: userWithoutPassword });
+//   } catch (error) {
+//     console.log(error);
+//     res.status(500).send(error);
+//   }
+// });
 
 // Register a new user
 // router.post('/register', [
