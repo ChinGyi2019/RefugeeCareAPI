@@ -6,6 +6,7 @@ const morgan = require("morgan");
 
 const app = express();
 const port = process.env.PORT || 3000;
+const host = process.env.HOST || "192.168.45.71"; // "192.168.75.37";
 
 // Middleware
 app.use(bodyParser.json());
@@ -44,6 +45,6 @@ app.use((err, req, res, next) => {
   res.status(500).send({ error: "Something went wrong!" });
 });
 
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
+app.listen(port, host, () => {
+  console.log(`Server is running on http://${host}:${port}`);
 });
